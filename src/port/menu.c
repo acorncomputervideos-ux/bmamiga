@@ -78,6 +78,151 @@ static const char *vsync_mode(void)
 	return bmamiga_vsync_locked() ? "Auto (locked)" : "Auto (timer)";
 }
 
+/* ---- The Pi 4's resolution ---------------------------------------------- */
+
+/* On the Pi 4 and Pi 400 the firmware sets the display's size at start up,
+   from hdmi_mode in config.txt (BMAmiga then only changes the refresh
+   rate, src/kms/pi4/modeset.h). The menu changes those lines: hdmi_mode
+   for HDMI0 and hdmi_mode:1 for HDMI1, with hdmi_group 1 (CEA). The modes
+   are the two the display driver re-times to the Amiga's rate
+   (docs/PI4.md). The file is kept as config.txt.bak first, as the web UI
+   does. */
+#define CONFIG_TXT "config.txt"
+#define CONFIG_TXT_MAX 16384
+
+static const int pi4_modes[] = {4, 16};
+static const char *const pi4_mode_names[] = {"1280x720", "1920x1080", NULL};
+
+static void card_path(char *path, size_t size, const char *name)
+{
+	const char *root = bmamiga_sd_root();
+	size_t len = strlen(root);
+	snprintf(path, size, "%s%s%s", root, len > 0 && root[len - 1] == '/' ? "" : "/", name);
+}
+
+/* config.txt, read whole into TEXT (CONFIG_TXT_MAX bytes). */
+static int read_config_txt(char *text)
+{
+	char path[256];
+	size_t n;
+	FILE *f;
+	card_path(path, sizeof path, CONFIG_TXT);
+	f = fopen(path, "r");
+	if (f == NULL)
+		return FALSE;
+	n = fread(text, 1, CONFIG_TXT_MAX - 1, f);
+	fclose(f);
+	text[n] = '\0';
+	return n < CONFIG_TXT_MAX - 1;   /* not cut short */
+}
+
+/* The hdmi_mode config.txt sets for HDMI0, or -1. */
+static int pi4_config_mode(void)
+{
+	static char text[CONFIG_TXT_MAX];
+	const char *line = text;
+	if (!read_config_txt(text))
+		return -1;
+	while (*line != '\0') {
+		const char *p = line + strspn(line, " \t");
+		if (strncmp(p, "hdmi_mode=", 10) == 0)
+			return atoi(p + 10);
+		line += strcspn(line, "\n");
+		if (*line == '\n')
+			line++;
+	}
+	return -1;
+}
+
+/* Writes TEXT to the card as NAME. */
+static int write_card_file(const char *name, const char *text)
+{
+	char path[256];
+	size_t len = strlen(text);
+	FILE *f;
+	card_path(path, sizeof path, name);
+	f = fopen(path, "w");
+	if (f == NULL)
+		return FALSE;
+	if (fwrite(text, 1, len, f) != len) {
+		fclose(f);
+		return FALSE;
+	}
+	return fclose(f) == 0;
+}
+
+/* Sets hdmi_mode (and hdmi_mode:1) in config.txt to MODE. */
+static int pi4_set_config_mode(int mode)
+{
+	static char text[CONFIG_TXT_MAX], out[CONFIG_TXT_MAX + 256];
+	const char *line;
+	size_t used = 0;
+	int found = FALSE;
+	if (!read_config_txt(text))
+		return FALSE;
+	out[0] = '\0';
+	for (line = text; *line != '\0';) {
+		size_t len = strcspn(line, "\n");
+		const char *p = line + strspn(line, " \t");
+		int n;
+		if (strncmp(p, "hdmi_mode=", 10) == 0) {
+			n = snprintf(out + used, sizeof out - used, "hdmi_mode=%d", mode);
+			found = TRUE;
+		} else if (strncmp(p, "hdmi_mode:1=", 12) == 0) {
+			n = snprintf(out + used, sizeof out - used, "hdmi_mode:1=%d", mode);
+		} else {
+			n = snprintf(out + used, sizeof out - used, "%.*s", (int) len, line);
+		}
+		if (n < 0 || (size_t) n >= sizeof out - used)
+			return FALSE;
+		used += (size_t) n;
+		line += len;
+		if (*line == '\n') {
+			if (used + 1 >= sizeof out)
+				return FALSE;
+			out[used++] = '\n';
+			out[used] = '\0';
+			line++;
+		}
+	}
+	if (!found) {
+		/* No hdmi_mode line: one for each port at the end. */
+		int n = snprintf(out + used, sizeof out - used,
+		                 "%s[all]\nhdmi_group=1\nhdmi_mode=%d\n[pi4]\nhdmi_group:1=1\n"
+		                 "hdmi_mode:1=%d\n[all]\n",
+		                 used > 0 && out[used - 1] != '\n' ? "\n" : "", mode, mode);
+		if (n < 0 || (size_t) n >= sizeof out - used)
+			return FALSE;
+	}
+	return write_card_file(CONFIG_TXT ".bak", text) && write_card_file(CONFIG_TXT, out);
+}
+
+/* The Resolution item on the Pi 4 and Pi 400. */
+static void pi4_resolution_menu(void)
+{
+	int mode = pi4_config_mode(), current = -1, i;
+	for (i = 0; pi4_mode_names[i] != NULL; i++)
+		if (pi4_modes[i] == mode || (mode == 19 && i == 0) || (mode == 31 && i == 1))
+			current = i;
+	i = osd_choose("Resolution (reboot)", pi4_mode_names, current);
+	if (i < 0 || i == current)
+		return;
+	if (pi4_set_config_mode(pi4_modes[i]))
+		reboot_needed = TRUE;
+	else
+		osd_message("Cannot change " CONFIG_TXT, TRUE);
+}
+
+static const char *pi4_resolution_name(void)
+{
+	switch (pi4_config_mode()) {
+	case 4: case 19: return "1280x720";
+	case 16: case 31: return "1920x1080";
+	case -1: return "Automatic";
+	default: return "Other";
+	}
+}
+
 static void video_menu(void)
 {
 	enum { V_VSYNC, V_RESOLUTION, V_SHADER, V_CURVATURE, V_SMOOTH, V_INTEGER };
@@ -91,9 +236,16 @@ static void video_menu(void)
 		for (k = 0; resolutions[k] != NULL; k++)
 			if (strcmp(res, resolutions[k]) == 0)
 				res_index = k;
+#if defined(RASPPI) && RASPPI == 4
+		const int pi4 = TRUE;
+#else
+		const int pi4 = FALSE;
+#endif
 		struct osd_item items[] = {
 			{"Frame Lock", vsync_mode(), OSD_ITEM_SUBMENU, V_VSYNC},
-			{"Resolution", resolution_names[res_index], OSD_ITEM_SUBMENU, V_RESOLUTION},
+			{pi4 ? "Resolution (reboot)" : "Resolution",
+			 pi4 ? pi4_resolution_name() : resolution_names[res_index],
+			 OSD_ITEM_SUBMENU, V_RESOLUTION},
 			{"CRT Effect (reboot)", NULL, check(setting_on("crt_shader", FALSE)), V_SHADER},
 			{"CRT Curvature (reboot)", NULL, check(setting_on("crt_curvature", FALSE)), V_CURVATURE},
 			{"Smooth Scaling (reboot)", NULL, check(setting_on("smooth", FALSE)), V_SMOOTH},
@@ -101,8 +253,9 @@ static void video_menu(void)
 		};
 		int chosen, i;
 		n_items = sizeof(items) / sizeof(items[0]);
-		if (!host_display_resolution_choice()) {
-			/* Resolution is only for the Pi 5 (with video_driver=kms). */
+		if (!pi4 && !host_display_resolution_choice()) {
+			/* Resolution is for the Pi 5 (with video_driver=kms), and
+			   the Pi 4 (config.txt). */
 			for (k = 1; k < n_items - 1; k++)
 				items[k] = items[k + 1];
 			n_items--;
@@ -110,6 +263,10 @@ static void video_menu(void)
 		chosen = osd_menu("Video", items, n_items, &sel);
 		switch (chosen) {
 		case V_RESOLUTION:
+			if (pi4) {
+				pi4_resolution_menu();
+				break;
+			}
 			i = osd_choose("Resolution", resolution_names, res_index);
 			if (i >= 0 && i != res_index) {
 				save_setting("resolution", resolutions[i]);

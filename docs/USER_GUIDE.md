@@ -55,7 +55,7 @@ item. In a list, typing a letter jumps to the next item starting with it.
 | Amiga Setup    | The Kickstart, CPU, CPU speed, chipset, chip, slow and fast RAM, sound filter and stereo separation, over the model's own (see Amiga Setup) |
 | Warp (F11)     | Run as fast as the Pi can, for loading and long waits; F11 turns it on and off |
 | Reset, Hard Reset | The Amiga's reset (as Ctrl+Amiga+Amiga), or power off and on |
-| Video          | The frame lock, the resolution (Pi 5), the CRT effect and its curvature, smooth scaling, integer scaling |
+| Video          | The frame lock, the resolution, the CRT effect and its curvature, smooth scaling, integer scaling |
 | Sound          | Volume, and HDMI or the headphone jack |
 | Network        | Ethernet or Wi-Fi, and the web UI (see below) |
 | About          | Versions, the model, the display, how busy the Pi is, the network |
@@ -255,6 +255,12 @@ looks. Sharp pixels then make some of the Amiga's lines one screen line
 taller than others; *Integer Scaling* in the Video menu (`integer_scale=1`)
 keeps every line the same height instead, enlarging the picture only by
 whole multiples, which leaves a border on most screens.
+
+*Resolution* in the Video menu chooses the screen's size: 1280x720 or
+1920x1080. On a Pi 4 or Pi 400 it changes `hdmi_mode` in `config.txt`
+(the old one is kept as `config.txt.bak`) and takes effect after a reboot;
+on a Pi 5 it is the `resolution` setting. The CRT effect looks best at
+1920x1080; 1280x720 is lighter work for the Pi.
 
 ## Networking and the web UI
 
