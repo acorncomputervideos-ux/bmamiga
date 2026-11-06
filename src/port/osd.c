@@ -3,8 +3,9 @@
  *
  * From BMCoco and BMAmiga. Text is drawn with a public domain 8x8 font
  * (the IBM VGA font, as Amiberry's libretro on-screen keyboard has it,
- * src/osdep/imgui_osk_font.h), each character doubled to 16x20 pixels in
- * a 640x480 area: 40 columns by 24 rows.
+ * src/osdep/imgui_osk_font.h), each character doubled in height, as on an
+ * Amiga's hi-res screen, in 8x20 pixel cells: a window of 60 columns by 24
+ * rows in the middle of a 640x480 area.
  *
  * This file is part of BMAmiga, a bare metal Amiga emulator for the
  * Raspberry Pi. See LICENSE for licensing details.
@@ -26,15 +27,20 @@
 
 #define OSD_W 640
 #define OSD_H 480
-#define CELL_W 16
+#define CELL_W 8
 #define CELL_H 20
+/* The window: its left edge, and its width. */
+#define WIN_W (OSD_COLS * CELL_W)
+#define WIN_X ((OSD_W - WIN_W) / 2)
 
-/* RGB565 colours: Workbench 1.3's blue, white and orange. */
-#define C_BLACK   0x02b5  /* the background: Workbench 1.3 blue (0x05a) */
-#define C_GREEN   0xffff  /* text: white */
-#define C_DKGREEN 0x8c71  /* labels and hints: grey */
-#define C_ORANGE  0xfc40  /* the selection: Workbench orange (0xf80) */
-#define C_RED     0xf800
+/* RGB565 colours: Workbench 2 and 3's grey, black, white and blue. */
+#define C_BG      0xad55  /* the background: grey (0xaaa) */
+#define C_TEXT    0x0000  /* text: black */
+#define C_DIM     0x632c  /* labels and hints: dark grey (0x666) */
+#define C_SHINE   0xffff  /* a bevel's light edge, and text on blue */
+#define C_SHADOW  0x0000  /* a bevel's dark edge */
+#define C_BLUE    0x6457  /* the title bar and the selection (0x68b) */
+#define C_SCREEN  0x2a8e  /* around the window: dark blue-grey (0x235) */
 
 #define REPEAT_DELAY 0.40
 #define REPEAT_RATE  0.06
@@ -52,7 +58,7 @@ static uint16_t *osd_fb(int *pitch)
 }
 
 /* A glyph of the 8x8 font (8 bytes, a row each, the leftmost pixel in
-   bit 0; the font starts at '!'), each pixel drawn 2x2, with 2 blank lines
+   bit 0; the font starts at '!'), each pixel drawn 1x2, with 2 blank lines
    above and below. */
 static void draw_char_at(uint16_t *fb, int pitch, int x, int y, unsigned char c,
                          uint16_t fg, uint16_t bg)
@@ -69,9 +75,7 @@ static void draw_char_at(uint16_t *fb, int pitch, int x, int y, unsigned char c,
 		unsigned bits = glyph != NULL && row >= 2 && font_row < 8 ? glyph[font_row] : 0;
 		for (col = 0; col < 8; col++) {
 			uint16_t colour = (bits & (1u << col)) ? fg : bg;
-			p[0] = colour;
-			p[1] = colour;
-			p += 2;
+			*p++ = colour;
 		}
 	}
 }
@@ -82,7 +86,7 @@ static void put_text(int col, int row, const char *text, uint16_t fg, uint16_t b
 	uint16_t *fb = osd_fb(&pitch);
 	for (; *text != '\0' && col < OSD_COLS; text++, col++) {
 		if (col >= 0)
-			draw_char_at(fb, pitch, col * CELL_W, row * CELL_H,
+			draw_char_at(fb, pitch, WIN_X + col * CELL_W, row * CELL_H,
 			             (unsigned char) *text, fg, bg);
 	}
 }
@@ -92,15 +96,42 @@ static void fill_row(int row, uint16_t bg)
 	int pitch, y, x;
 	uint16_t *fb = osd_fb(&pitch);
 	for (y = row * CELL_H; y < (row + 1) * CELL_H; y++)
-		for (x = 0; x < OSD_W; x++)
+		for (x = WIN_X; x < WIN_X + WIN_W; x++)
 			fb[y * pitch + x] = bg;
 }
 
+/* A line across the window at Y. */
+static void hline(int y, uint16_t colour)
+{
+	int pitch, x;
+	uint16_t *fb = osd_fb(&pitch);
+	for (x = WIN_X; x < WIN_X + WIN_W; x++)
+		fb[y * pitch + x] = colour;
+}
+
+/* A line down the display at X. */
+static void vline(int x, uint16_t colour)
+{
+	int pitch, y;
+	uint16_t *fb = osd_fb(&pitch);
+	for (y = 0; y < OSD_H; y++)
+		fb[y * pitch + x] = colour;
+}
+
+/* The screen, with an empty window on it, its edges raised. */
 static void clear_screen(void)
 {
-	int row;
-	for (row = 0; row < OSD_ROWS; row++)
-		fill_row(row, C_BLACK);
+	int pitch, x, y;
+	uint16_t *fb = osd_fb(&pitch);
+	for (y = 0; y < OSD_H; y++)
+		for (x = 0; x < OSD_W; x++)
+			fb[y * pitch + x] = C_SCREEN;
+	for (y = 0; y < OSD_ROWS; y++)
+		fill_row(y, C_BG);
+	for (x = 0; x < 4; x++) {
+		vline(WIN_X - 4 + x, x == 0 ? C_SHINE : C_BG);
+		vline(WIN_X + WIN_W + x, x == 3 ? C_SHADOW : C_BG);
+	}
 }
 
 /* Text of at most WIDTH characters, cut with "..." if longer. */
@@ -128,57 +159,16 @@ static void put_centred(int row, const char *text, uint16_t fg, uint16_t bg)
 static void draw_frame(const char *title, const char *hint)
 {
 	clear_screen();
-	fill_row(0, C_GREEN);
-	put_centred(0, title, C_BLACK, C_GREEN);
+	fill_row(0, C_BLUE);
+	put_centred(0, title, C_SHINE, C_BLUE);
+	/* A raised edge under the title bar and a sunken one over the hint,
+	   as Workbench's windows have. */
+	hline(CELL_H, C_SHADOW);
+	hline(CELL_H + 1, C_SHINE);
+	hline((OSD_ROWS - 1) * CELL_H - 2, C_SHADOW);
+	hline((OSD_ROWS - 1) * CELL_H - 1, C_SHINE);
 	if (hint != NULL)
-		put_centred(OSD_ROWS - 1, hint, C_DKGREEN, C_BLACK);
-}
-
-/* ---- The start-up screen ------------------------------------------------------ */
-
-/* A glyph of the font, each pixel drawn SCALE x SCALE, in FG only. */
-static void draw_big_char(uint16_t *fb, int pitch, int x, int y, unsigned char c,
-                          int scale, uint16_t fg)
-{
-	const uint8_t *glyph;
-	int row, col, i, j;
-	if (c < OSK_FONT_FIRST_CHAR || c - OSK_FONT_FIRST_CHAR >= OSK_FONT_GLYPHS)
-		return;
-	glyph = &osk_font_8x8[(c - OSK_FONT_FIRST_CHAR) * 8];
-	for (row = 0; row < 8; row++)
-		for (col = 0; col < 8; col++)
-			if (glyph[row] & (1u << col))
-				for (i = 0; i < scale; i++)
-					for (j = 0; j < scale; j++)
-						fb[(y + row * scale + i) * pitch + x + col * scale + j] = fg;
-}
-
-static void draw_big_text(int y, const char *text, int scale, uint16_t fg)
-{
-	int pitch, x = (OSD_W - (int) strlen(text) * 8 * scale) / 2;
-	uint16_t *fb = osd_fb(&pitch);
-	for (; *text != '\0'; text++, x += 8 * scale)
-		draw_big_char(fb, pitch, x, y, (unsigned char) *text, scale, fg);
-}
-
-void osd_splash(const char *version, const char *status)
-{
-	/* The Amiga logo's rainbow, under the name. */
-	static const uint16_t rainbow[] = {0xf800, 0xfc40, 0xffe0, 0x07e0, 0x041f, 0x801f};
-	int pitch, i, x, y;
-	uint16_t *fb = osd_fb(&pitch);
-	char line[OSD_COLS + 1];
-	clear_screen();
-	draw_big_text(150, "BMAmiga", 7, C_GREEN);
-	for (i = 0; i < 6; i++)
-		for (y = 214 + i * 4; y < 218 + i * 4; y++)
-			for (x = 124; x < 516; x++)
-				fb[y * pitch + x] = rainbow[i];
-	fit(line, sizeof line, version, OSD_COLS);
-	draw_big_text(262, line, 2, C_GREEN);
-	fit(line, sizeof line, status, OSD_COLS);
-	draw_big_text(330, line, 2, C_ORANGE);
-	bmamiga_osd_view(TRUE);
+		put_centred(OSD_ROWS - 1, hint, C_DIM, C_BG);
 }
 
 /* ---- Opening and closing ------------------------------------------------------ */
@@ -436,12 +426,12 @@ static void draw_item(int row, const struct osd_item *item, int highlight)
 {
 	char line[OSD_COLS + 1], text[OSD_COLS + 1], value[OSD_COLS + 1];
 	int text_width, value_len = 0, col = 1;
-	uint16_t fg = item->flags & OSD_ITEM_LABEL ? C_DKGREEN : C_GREEN;
-	uint16_t bg = C_BLACK;
+	uint16_t fg = item->flags & OSD_ITEM_LABEL ? C_DIM : C_TEXT;
+	uint16_t bg = C_BG;
 
 	if (highlight) {
-		fg = C_BLACK;
-		bg = C_ORANGE;
+		fg = C_SHINE;
+		bg = C_BLUE;
 	}
 	memset(line, ' ', OSD_COLS);
 	line[OSD_COLS] = '\0';
@@ -496,9 +486,9 @@ int osd_menu(const char *title, const struct osd_item *items, int n, int *select
 		for (i = 0; i < LIST_ROWS && top + i < n; i++)
 			draw_item(LIST_TOP + i, &items[top + i], top + i == sel);
 		if (top > 0)
-			put_text(OSD_COLS - 1, LIST_TOP - 1, "^", C_DKGREEN, C_BLACK);
+			put_text(OSD_COLS - 1, LIST_TOP - 1, "^", C_DIM, C_BG);
 		if (top + LIST_ROWS < n)
-			put_text(OSD_COLS - 1, LIST_TOP + LIST_ROWS, "v", C_DKGREEN, C_BLACK);
+			put_text(OSD_COLS - 1, LIST_TOP + LIST_ROWS, "v", C_DIM, C_BG);
 
 		key = osd_read_key();
 		switch (key) {
@@ -599,7 +589,7 @@ int osd_edit(const char *title, char *text, size_t size, int secret)
 			shown = buf + len - (OSD_COLS - 4);
 		draw_frame(title, "Enter: OK   Esc: cancel");
 		snprintf(line, sizeof(line), "%s_", shown);
-		put_text(2, 5, line, C_GREEN, C_BLACK);
+		put_text(2, 5, line, C_TEXT, C_BG);
 
 		key = osd_read_key();
 		if (key == OSD_KEY_ENTER) {
@@ -637,7 +627,7 @@ static int draw_wrapped(int row, int max_rows, const char *text, uint16_t fg)
 			len = cut > 0 ? cut : width;
 		}
 		snprintf(line, sizeof(line), "%.*s", len, text);
-		put_text(1, row + drawn, line, fg, C_BLACK);
+		put_text(1, row + drawn, line, fg, C_BG);
 		drawn++;
 		text += len;
 		if (*text == ' ' || *text == '\n')
@@ -652,7 +642,7 @@ void osd_message(const char *text, int wait)
 	if (!was_open)
 		osd_open();
 	draw_frame("BMAmiga", wait ? "Press any key" : NULL);
-	draw_wrapped(5, OSD_ROWS - 7, text, C_GREEN);
+	draw_wrapped(5, OSD_ROWS - 7, text, C_TEXT);
 	if (wait) {
 		osd_read_key();
 	} else {
@@ -667,7 +657,7 @@ void osd_message(const char *text, int wait)
 void osd_show_text(const char *title, const char *text, const char *hint)
 {
 	draw_frame(title, hint);
-	draw_wrapped(LIST_TOP, LIST_ROWS, text, C_GREEN);
+	draw_wrapped(LIST_TOP, LIST_ROWS, text, C_TEXT);
 }
 
 void osd_info(const char *title, const char *text)
@@ -961,9 +951,9 @@ void osd_draw_notification(uint16_t *fb, int pitch_px, int w, int h)
 	y = h - CELL_H - 4;
 	if (x < 0 || y < 0)
 		return;
-	draw_char_at(fb, pitch_px, x, y, ' ', C_BLACK, C_GREEN);
+	draw_char_at(fb, pitch_px, x, y, ' ', C_TEXT, C_BG);
 	for (i = 0; i < len - 2; i++)
 		draw_char_at(fb, pitch_px, x + (i + 1) * CELL_W, y,
-		             (unsigned char) notify_text[i], C_BLACK, C_GREEN);
-	draw_char_at(fb, pitch_px, x + (len - 1) * CELL_W, y, ' ', C_BLACK, C_GREEN);
+		             (unsigned char) notify_text[i], C_TEXT, C_BG);
+	draw_char_at(fb, pitch_px, x + (len - 1) * CELL_W, y, ' ', C_TEXT, C_BG);
 }

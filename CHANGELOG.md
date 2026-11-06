@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- The start-up screen is gone: the screen is black while Amiberry starts,
+  as before 0.2.2
+- The menus look like Workbench 2 and 3: a grey window with black text, a
+  blue title bar and selection and raised edges, on a dark blue-grey screen.
+  The text has the Amiga's hi-res proportions (single width, double height),
+  so the menus are 60 columns wide instead of 40
+
 ## 0.2.3 – 2026-10-30
 
 - Disk images past 2 GB: Circle's C library cut a file position to 32

@@ -2,7 +2,7 @@
  * osd.h - BMAmiga's on-screen display: menus, file browser, text entry.
  *
  * BMAmiga's menu (F12: disks, model, video, sound, network, power) is
- * drawn straight into the frame buffer, 40 columns by 24 rows. While the
+ * drawn straight into the frame buffer, 60 columns by 24 rows. While the
  * display is open the emulation is paused.
  *
  * This file is part of BMAmiga, a bare metal Amiga emulator for the
@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 /* The text grid. */
-#define OSD_COLS 40
+#define OSD_COLS 60
 #define OSD_ROWS 24
 
 /* Keys from osd_read_key(): printable characters are themselves. */
@@ -90,11 +90,6 @@ int osd_browse(const char *title, char *dir, size_t dir_size,
 /* As osd_browse(), for a folder: "Use This Folder" chooses the one shown,
    and only folders are listed. Returns 1 with its path in PATH. */
 int osd_browse_dir(const char *title, char *dir, size_t dir_size, char *path, size_t path_size);
-
-/* The screen shown while Amiberry starts (reading the Kickstarts can take
-   seconds): BMAmiga's name, VERSION and STATUS. The Amiga's first picture
-   replaces it. */
-void osd_splash(const char *version, const char *status);
 
 /* Draws a one line message over the emulator's picture, for a few seconds. */
 void osd_notify(const char *text);
