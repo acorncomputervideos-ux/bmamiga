@@ -22,6 +22,12 @@
   second), between frames. While a file is sent or received, the Amiga
   now pauses and they have the core to themselves, with a box over its
   picture that says so and how far the transfer has got
+- The picture fills the screen's height with sharp pixels too, as it did
+  only with Smooth Scaling: sharp pixels were enlarged by whole multiples
+  only, so an Amiga's picture (568 lines) was shown once on a 1080 line
+  screen, about half its height, and turning smoothing on made it bigger.
+  *Integer Scaling* in the Video menu (`integer_scale=1`) keeps the whole
+  multiples, every line the same height
 - The web UI looks like Workbench 2 and 3, as the menus do: grey windows
   with raised and sunken edges, blue title bars, black text, and a bar
   along the top with Status, Files, the Pi's state, Reboot and Shut Down.

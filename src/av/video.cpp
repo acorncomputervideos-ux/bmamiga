@@ -86,7 +86,7 @@ Pi4Video::Pi4Video(void)
       m_nSourceWidth(0), m_nSourceHeight(0), m_nViewX(0), m_nViewY(0),
       m_nViewW(0), m_nViewH(0), m_nDestX(0), m_nDestY(0), m_nDestW(0),
       m_nDestH(0), m_nRepeat(1), m_pColumn(0), m_bFiltered(false),
-      m_bCrt(false), m_bSmooth(false), m_bCurvature(false),
+      m_bCrt(false), m_bSmooth(false), m_bCurvature(false), m_bInteger(false),
       m_bScalerReady(false), m_pJobPage(0), m_pKms(0),
       m_Driver(Driver::Firmware), m_pKmsTarget(0),
       m_nKmsPitch(0), m_pGpuOffered(0), m_pGpu(0), m_bGpuReady(false),
@@ -138,8 +138,10 @@ bool Pi4Video::TakeFrameBuffer(unsigned width, unsigned height,
   return false;
 }
 
-bool Pi4Video::Initialize(bool crt, bool smooth, bool curvature, Driver driver) {
+bool Pi4Video::Initialize(bool crt, bool smooth, bool curvature, Driver driver,
+                          bool integer) {
   m_Driver = driver;
+  m_bInteger = integer;
   m_bCrt = crt;
   m_bSmooth = smooth;
   m_bCurvature = crt && curvature;
@@ -266,11 +268,12 @@ int Pi4Video::Allocate(int width, int height, uint16_t **pixels, int *pitch) {
   return 0;
 }
 
-// Sharp: the view fills the display's height (times SCALE) in whole
-// multiples of its own height, so every emulated line is the same number of
-// display lines, and the columns are picked nearest neighbour.
-// Filtered: the view fills the height (times SCALE) exactly, as on the
-// Pi 3. Either way the width follows the aspect ratio, and lines start
+// The view fills the display's height (times SCALE), sharp, smooth or CRT
+// alike, so turning smoothing on or off doesn't change the picture's size.
+// Sharp pixels are picked nearest neighbour (some emulated lines a display
+// line taller than others); with integer_scale they are enlarged by whole
+// multiples of the view's height instead, every line the same, which can
+// leave a wide border (an Amiga's 568 lines fit a 1080 line display once). Either way the width follows the aspect ratio, and lines start
 // and end on 16-byte boundaries, for ToFrameBuffer().
 void Pi4Video::SetView(int x, int y, int w, int h, double aspect,
                        double scale) {
@@ -290,7 +293,7 @@ void Pi4Video::SetView(int x, int y, int w, int h, double aspect,
   m_nViewH = h;
 
   unsigned dest_h;
-  if (m_bFiltered) {
+  if (m_bFiltered || !m_bInteger) {
     dest_h = (unsigned)(m_nHeight * scale);
     m_nRepeat = 1;
   } else {
@@ -365,9 +368,12 @@ void Pi4Video::DrawSharp(uint8_t *page) {
         line32[i] = Pi4Rgb565ToArgb(src[m_pColumn[i]]);
       }
     }
-    uint8_t *dst = page + (size_t)(m_nDestY + y * m_nRepeat) * m_nPitch +
-                   m_nDestX * bytes;
-    for (unsigned r = 0; r < m_nRepeat; r++) {
+    // The display lines this one covers: the same number for each with
+    // integer_scale, otherwise one more for some, as the height needs.
+    const unsigned first = ((unsigned)y * m_nDestH) / (unsigned)m_nViewH;
+    const unsigned end = ((unsigned)(y + 1) * m_nDestH) / (unsigned)m_nViewH;
+    uint8_t *dst = page + (size_t)(m_nDestY + first) * m_nPitch + m_nDestX * bytes;
+    for (unsigned r = first; r < end; r++) {
       ToFrameBuffer(dst, line, m_nDestW * bytes, 0);
       dst += m_nPitch;
     }
@@ -562,9 +568,9 @@ void Pi4Video::Blank(void) {
 // The direct display driver (src/kms/pi4/, or src/kms/pi5/ on the Pi 5).
 //
 
-// As SetView() does for the framebuffer, on the mode's size: sharp in whole
-// multiples of the view's height, smooth and CRT filling the height (times
-// SCALE). Sharp and smooth hand the HVS the view as it is; the CRT shader
+// As SetView() does for the framebuffer, on the mode's size: filling the
+// height (times SCALE), sharp in whole multiples of the view's height with
+// integer_scale. Sharp and smooth hand the HVS the view as it is; the CRT shader
 // draws at the size shown, or a whole fraction of it no more than 1080
 // lines (720 curved and smooth), which the HVS enlarges sharply.
 void Pi4Video::SetViewKms(int x, int y, int w, int h, double aspect,
@@ -583,7 +589,7 @@ void Pi4Video::SetViewKms(int x, int y, int w, int h, double aspect,
 
   const unsigned width = m_pKms->Width(), height = m_pKms->Height();
   unsigned dest_h;
-  if (m_bFiltered) {
+  if (m_bFiltered || !m_bInteger) {
     dest_h = (unsigned)(height * scale);
   } else {
     unsigned repeat = (unsigned)(height * scale) / (unsigned)h;

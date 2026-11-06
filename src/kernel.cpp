@@ -287,7 +287,8 @@ bool CKernel::Initialize(void) {
   }
   if (!mVideo.Initialize(mOptions.GetBool("crt_shader", false),
                          mOptions.GetBool("smooth", false),
-                         mOptions.GetBool("crt_curvature", false), driver)) {
+                         mOptions.GetBool("crt_curvature", false), driver,
+                         mOptions.GetBool("integer_scale", false))) {
     return false;
   }
   mLog.Flush();

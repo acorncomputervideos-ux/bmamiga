@@ -89,8 +89,10 @@ public:
 
   // Core 0, at start up: takes a double buffered framebuffer and, if asked
   // to, the HVS. CRT, SMOOTH and CURVATURE are the crt_shader, smooth and
-  // crt_curvature options.
-  bool Initialize(bool crt, bool smooth, bool curvature, Driver driver);
+  // crt_curvature options; INTEGER (integer_scale) has sharp pixels
+  // enlarged by whole multiples only, rather than filling the screen.
+  bool Initialize(bool crt, bool smooth, bool curvature, Driver driver,
+                  bool integer = false);
 
   // Core 1, from the emulator (see host.h).
   // PITCH is in bytes.
@@ -165,7 +167,7 @@ private:
 
   // Smooth scaling and the CRT shader.
   bool m_bFiltered;
-  bool m_bCrt, m_bSmooth, m_bCurvature;
+  bool m_bCrt, m_bSmooth, m_bCurvature, m_bInteger;
   bool m_bScalerReady;
   Pi4Scaler m_Scaler;
   uint32_t *m_pLine[4];   // a line of output per core

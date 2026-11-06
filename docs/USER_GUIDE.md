@@ -55,7 +55,7 @@ item. In a list, typing a letter jumps to the next item starting with it.
 | Amiga Setup    | The Kickstart, CPU, CPU speed, chipset, chip, slow and fast RAM, sound filter and stereo separation, over the model's own (see Amiga Setup) |
 | Warp (F11)     | Run as fast as the Pi can, for loading and long waits; F11 turns it on and off |
 | Reset, Hard Reset | The Amiga's reset (as Ctrl+Amiga+Amiga), or power off and on |
-| Video          | The frame lock, the resolution (Pi 5), the CRT effect and its curvature, smooth scaling |
+| Video          | The frame lock, the resolution (Pi 5), the CRT effect and its curvature, smooth scaling, integer scaling |
 | Sound          | Volume, and HDMI or the headphone jack |
 | Network        | Ethernet or Wi-Fi, and the web UI (see below) |
 | About          | Versions, the model, the display, how busy the Pi is, the network |
@@ -249,6 +249,13 @@ easiest for the Pi; the Amiga 4000/040 the hardest.
 `statusline=1` shows Amiberry's status line: the drive lights and the
 speed.
 
+The picture fills the screen's height (times `scale`), with sharp pixels
+or with *Smooth Scaling*, so switching between them only changes how it
+looks. Sharp pixels then make some of the Amiga's lines one screen line
+taller than others; *Integer Scaling* in the Video menu (`integer_scale=1`)
+keeps every line the same height instead, enlarging the picture only by
+whole multiples, which leaves a border on most screens.
+
 ## Networking and the web UI
 
 BMAmiga can join your network over Ethernet or Wi-Fi and serve a web page
@@ -364,6 +371,7 @@ the web UI.
 | `aspect`            | number                       | `1.0`    | Multiplies the width of the picture |
 | `scale`             | 0.1 to 1.0                   | `1.0`    | Height of the picture as a fraction of the screen (less for a TV that cuts off the edges) |
 | `smooth`            | `0`, `1`                     | `0`      | Bilinear filtering instead of sharp pixels |
+| `integer_scale`     | `0`, `1`                     | `0`      | Sharp pixels enlarged by whole multiples only: every line the same height, but a smaller picture (an Amiga's picture fits a 1080 line screen once). Without it the picture fills the screen's height, sharp or smooth |
 | `crt_shader`        | `0`, `1`                     | `0`      | CRT look (scanlines) from BMC64 |
 | `crt_curvature`     | `0`, `1`                     | `0`      | With `crt_shader`, a curved screen |
 | `crt_gpu`           | `0`, `1`                     | `1`      | The 3D GPU draws the smooth and CRT pictures; `0` has the ARM draw them (see [PI4.md](PI4.md)) |

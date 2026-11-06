@@ -80,7 +80,7 @@ static const char *vsync_mode(void)
 
 static void video_menu(void)
 {
-	enum { V_VSYNC, V_RESOLUTION, V_SHADER, V_CURVATURE, V_SMOOTH };
+	enum { V_VSYNC, V_RESOLUTION, V_SHADER, V_CURVATURE, V_SMOOTH, V_INTEGER };
 	/* The Pi 5 only: its firmware ignores hdmi_mode (from BMA800XL). */
 	static const char *const resolutions[] = {"auto", "1920x1080", "1280x720", NULL};
 	static const char *const resolution_names[] = {"Auto", "1920x1080", "1280x720", NULL};
@@ -97,6 +97,7 @@ static void video_menu(void)
 			{"CRT Effect (reboot)", NULL, check(setting_on("crt_shader", FALSE)), V_SHADER},
 			{"CRT Curvature (reboot)", NULL, check(setting_on("crt_curvature", FALSE)), V_CURVATURE},
 			{"Smooth Scaling (reboot)", NULL, check(setting_on("smooth", FALSE)), V_SMOOTH},
+			{"Integer Scaling (reboot)", NULL, check(setting_on("integer_scale", FALSE)), V_INTEGER},
 		};
 		int chosen, i;
 		n_items = sizeof(items) / sizeof(items[0]);
@@ -139,6 +140,10 @@ static void video_menu(void)
 			break;
 		case V_SMOOTH:
 			save_setting("smooth", setting_on("smooth", FALSE) ? "0" : "1");
+			reboot_needed = TRUE;
+			break;
+		case V_INTEGER:
+			save_setting("integer_scale", setting_on("integer_scale", FALSE) ? "0" : "1");
 			reboot_needed = TRUE;
 			break;
 		default:
