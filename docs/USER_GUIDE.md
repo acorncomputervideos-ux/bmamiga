@@ -257,9 +257,13 @@ keeps every line the same height instead, enlarging the picture only by
 whole multiples, which leaves a border on most screens.
 
 *Resolution* in the Video menu chooses the screen's size: 1280x720 or
-1920x1080. On a Pi 4 or Pi 400 it changes `hdmi_mode` in `config.txt`
-(the old one is kept as `config.txt.bak`) and takes effect after a reboot;
-on a Pi 5 it is the `resolution` setting. The CRT effect looks best at
+1920x1080, and on a Pi 4 or Pi 400 also 1280x1024, for a computer monitor.
+On a Pi 4 or Pi 400 it changes `hdmi_group` and `hdmi_mode` in
+`config.txt` (the old one is kept as `config.txt.bak`) and takes effect
+after a reboot; on a Pi 5 it is the `resolution` setting. BMAmiga switches
+1280x720 and 1920x1080 to the Amiga's own rate (50 Hz for a PAL Amiga) for
+smooth scrolling; 1280x1024 stays at 60 Hz, and the Amiga then keeps its
+own time, so scrolling can stutter now and then. The CRT effect looks best at
 1920x1080; 1280x720 is lighter work for the Pi.
 
 ## Networking and the web UI

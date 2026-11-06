@@ -29,8 +29,9 @@
   *Integer Scaling* in the Video menu (`integer_scale=1`) keeps the whole
   multiples, every line the same height
 - Resolution in the Video menu on the Pi 4 and Pi 400 too (it was the Pi
-  5's only): 1280x720 or 1920x1080, by changing hdmi_mode in config.txt
-  (kept as config.txt.bak), after a reboot
+  5's only): 1280x720, 1920x1080 or 1280x1024 (a computer monitor's, at
+  60 Hz), by changing hdmi_group and hdmi_mode in config.txt (kept as
+  config.txt.bak), after a reboot
 - The web UI looks like Workbench 2 and 3, as the menus do: grey windows
   with raised and sunken edges, blue title bars, black text, and a bar
   along the top with Status, Files, the Pi's state, Reboot and Shut Down.

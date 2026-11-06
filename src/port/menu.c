@@ -82,16 +82,17 @@ static const char *vsync_mode(void)
 
 /* On the Pi 4 and Pi 400 the firmware sets the display's size at start up,
    from hdmi_mode in config.txt (BMAmiga then only changes the refresh
-   rate, src/kms/pi4/modeset.h). The menu changes those lines: hdmi_mode
-   for HDMI0 and hdmi_mode:1 for HDMI1, with hdmi_group 1 (CEA). The modes
-   are the two the display driver re-times to the Amiga's rate
-   (docs/PI4.md). The file is kept as config.txt.bak first, as the web UI
-   does. */
+   rate, src/kms/pi4/modeset.h). The menu changes those lines: hdmi_group
+   and hdmi_mode for HDMI0, hdmi_group:1 and hdmi_mode:1 for HDMI1. 720p
+   and 1080p (CEA, group 1) are the modes the display driver re-times to
+   the Amiga's rate (docs/PI4.md); 1280x1024 (DMT, group 2, a computer
+   monitor's) stays at 60 Hz, and the Amiga keeps its own time on it. The
+   file is kept as config.txt.bak first, as the web UI does. */
 #define CONFIG_TXT "config.txt"
 #define CONFIG_TXT_MAX 16384
 
-static const int pi4_modes[] = {4, 16};
-static const char *const pi4_mode_names[] = {"1280x720", "1920x1080", NULL};
+static const struct { int group, mode; } pi4_modes[] = {{1, 4}, {1, 16}, {2, 35}};
+static const char *const pi4_mode_names[] = {"1280x720", "1920x1080", "1280x1024", NULL};
 
 static void card_path(char *path, size_t size, const char *name)
 {
@@ -116,22 +117,27 @@ static int read_config_txt(char *text)
 	return n < CONFIG_TXT_MAX - 1;   /* not cut short */
 }
 
-/* The hdmi_mode config.txt sets for HDMI0, or -1. */
-static int pi4_config_mode(void)
+/* The hdmi_mode config.txt sets for HDMI0, or -1, and its hdmi_group
+   (1, CEA, if none is set). */
+static int pi4_config_mode(int *group)
 {
 	static char text[CONFIG_TXT_MAX];
 	const char *line = text;
+	int mode = -1;
+	*group = 1;
 	if (!read_config_txt(text))
 		return -1;
 	while (*line != '\0') {
 		const char *p = line + strspn(line, " \t");
-		if (strncmp(p, "hdmi_mode=", 10) == 0)
-			return atoi(p + 10);
+		if (strncmp(p, "hdmi_mode=", 10) == 0 && mode < 0)
+			mode = atoi(p + 10);
+		else if (strncmp(p, "hdmi_group=", 11) == 0)
+			*group = atoi(p + 11);
 		line += strcspn(line, "\n");
 		if (*line == '\n')
 			line++;
 	}
-	return -1;
+	return mode;
 }
 
 /* Writes TEXT to the card as NAME. */
@@ -151,8 +157,9 @@ static int write_card_file(const char *name, const char *text)
 	return fclose(f) == 0;
 }
 
-/* Sets hdmi_mode (and hdmi_mode:1) in config.txt to MODE. */
-static int pi4_set_config_mode(int mode)
+/* Sets hdmi_group and hdmi_mode (and hdmi_group:1 and hdmi_mode:1) in
+   config.txt to GROUP and MODE. */
+static int pi4_set_config_mode(int group, int mode)
 {
 	static char text[CONFIG_TXT_MAX], out[CONFIG_TXT_MAX + 256];
 	const char *line;
@@ -170,6 +177,10 @@ static int pi4_set_config_mode(int mode)
 			found = TRUE;
 		} else if (strncmp(p, "hdmi_mode:1=", 12) == 0) {
 			n = snprintf(out + used, sizeof out - used, "hdmi_mode:1=%d", mode);
+		} else if (strncmp(p, "hdmi_group=", 11) == 0) {
+			n = snprintf(out + used, sizeof out - used, "hdmi_group=%d", group);
+		} else if (strncmp(p, "hdmi_group:1=", 13) == 0) {
+			n = snprintf(out + used, sizeof out - used, "hdmi_group:1=%d", group);
 		} else {
 			n = snprintf(out + used, sizeof out - used, "%.*s", (int) len, line);
 		}
@@ -188,9 +199,9 @@ static int pi4_set_config_mode(int mode)
 	if (!found) {
 		/* No hdmi_mode line: one for each port at the end. */
 		int n = snprintf(out + used, sizeof out - used,
-		                 "%s[all]\nhdmi_group=1\nhdmi_mode=%d\n[pi4]\nhdmi_group:1=1\n"
+		                 "%s[all]\nhdmi_group=%d\nhdmi_mode=%d\n[pi4]\nhdmi_group:1=%d\n"
 		                 "hdmi_mode:1=%d\n[all]\n",
-		                 used > 0 && out[used - 1] != '\n' ? "\n" : "", mode, mode);
+		                 used > 0 && out[used - 1] != '\n' ? "\n" : "", group, mode, group, mode);
 		if (n < 0 || (size_t) n >= sizeof out - used)
 			return FALSE;
 	}
@@ -198,16 +209,28 @@ static int pi4_set_config_mode(int mode)
 }
 
 /* The Resolution item on the Pi 4 and Pi 400. */
+/* Which of pi4_modes config.txt has, or -1. 720p and 1080p at 50 Hz
+   (modes 19 and 31) count as theirs. */
+static int pi4_current_mode(void)
+{
+	int group, mode = pi4_config_mode(&group), i;
+	if (group == 1 && mode == 19)
+		mode = 4;
+	if (group == 1 && mode == 31)
+		mode = 16;
+	for (i = 0; pi4_mode_names[i] != NULL; i++)
+		if (pi4_modes[i].group == group && pi4_modes[i].mode == mode)
+			return i;
+	return -1;
+}
+
 static void pi4_resolution_menu(void)
 {
-	int mode = pi4_config_mode(), current = -1, i;
-	for (i = 0; pi4_mode_names[i] != NULL; i++)
-		if (pi4_modes[i] == mode || (mode == 19 && i == 0) || (mode == 31 && i == 1))
-			current = i;
+	int current = pi4_current_mode(), i;
 	i = osd_choose("Resolution (reboot)", pi4_mode_names, current);
 	if (i < 0 || i == current)
 		return;
-	if (pi4_set_config_mode(pi4_modes[i]))
+	if (pi4_set_config_mode(pi4_modes[i].group, pi4_modes[i].mode))
 		reboot_needed = TRUE;
 	else
 		osd_message("Cannot change " CONFIG_TXT, TRUE);
@@ -215,12 +238,10 @@ static void pi4_resolution_menu(void)
 
 static const char *pi4_resolution_name(void)
 {
-	switch (pi4_config_mode()) {
-	case 4: case 19: return "1280x720";
-	case 16: case 31: return "1920x1080";
-	case -1: return "Automatic";
-	default: return "Other";
-	}
+	int group, i = pi4_current_mode();
+	if (i >= 0)
+		return pi4_mode_names[i];
+	return pi4_config_mode(&group) < 0 ? "Automatic" : "Other";
 }
 
 static void video_menu(void)
