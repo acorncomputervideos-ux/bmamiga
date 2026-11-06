@@ -90,8 +90,17 @@ extern "C" void bmamiga_request_coldstart(void);
 
 namespace {
 
-// A file upload or download is under way (WebUiTransferActive()).
-volatile bool s_transfer = false;
+// A file upload or download under way, and how far it has got
+// (WebUiTransfer()).
+volatile int s_transfer = 0;
+volatile unsigned long long s_transfer_done = 0;
+volatile unsigned long long s_transfer_total = 0;
+
+void StartTransfer(int kind) {
+  s_transfer_done = 0;
+  s_transfer_total = 0;
+  s_transfer = kind;
+}
 
 // Keep in sync with the CIRCLE_NETWORK_* enum in third_party/common/circle.h.
 const char *NetStatusText(int status) {
@@ -474,16 +483,16 @@ boolean HandleConnection(CSocket *socket) {
   }
 
   if (is_get && strcmp(target, "/api/fs/download") == 0) {
-    s_transfer = true;
+    StartTransfer(WEBUI_SENDING);
     WebUiFsDownload(socket, query);
-    s_transfer = false;
+    s_transfer = 0;
     return FALSE;
   }
 
   if (is_post && strcmp(target, "/api/fs/upload") == 0) {
-    s_transfer = true;
+    StartTransfer(WEBUI_RECEIVING);
     WebUiFsUpload(socket, query, body, body_prefetched, content_length);
-    s_transfer = false;
+    s_transfer = 0;
     return FALSE;
   }
 
@@ -666,11 +675,24 @@ void WebUiStart(CNetSubSystem *network, const char *pin) {
   new CWebUiTask(network);  // registers itself with the scheduler
 }
 
-bool WebUiTransferActive(void) { return s_transfer; }
+int WebUiTransfer(unsigned long long *done, unsigned long long *total) {
+  *done = s_transfer_done;
+  *total = s_transfer_total;
+  return s_transfer;
+}
+
+void WebUiTransferProgress(unsigned long long done, unsigned long long total) {
+  s_transfer_done = done;
+  s_transfer_total = total;
+}
 
 #else  // no Circle networking on this machine build
 
 void WebUiStart(CNetSubSystem *, const char *) {}
-bool WebUiTransferActive(void) { return false; }
+int WebUiTransfer(unsigned long long *done, unsigned long long *total) {
+  *done = *total = 0;
+  return 0;
+}
+void WebUiTransferProgress(unsigned long long, unsigned long long) {}
 
 #endif

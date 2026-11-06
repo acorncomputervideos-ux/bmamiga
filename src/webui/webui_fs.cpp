@@ -381,6 +381,7 @@ BodyResult ReceiveBodyToFile(CSocket *socket, const char *temppath,
     }
     written += prefetched_len;
   }
+  WebUiTransferProgress(written, total);
 
   // Circle returns one TCP segment per Receive, so fill the whole buffer
   // before writing: a blocking Receive on an empty queue lets the other
@@ -427,6 +428,7 @@ BodyResult ReceiveBodyToFile(CSocket *socket, const char *temppath,
     u64 t2 = CTimer::GetClockTicks64();
     write_ticks += t2 - t1;
     written += fill;
+    WebUiTransferProgress(written, total);
     batches++;
     CScheduler::Get()->Yield();
     yield_ticks += CTimer::GetClockTicks64() - t2;
@@ -653,6 +655,8 @@ void WebUiFsDownload(CSocket *socket, const char *query) {
     return;
   }
 
+  uint64_t sent = 0;
+  WebUiTransferProgress(0, size);
   for (;;) {
     unsigned read_bytes = 0;
     if (sd_read(file, s_io_buffer, sizeof(s_io_buffer), &read_bytes) != SD_OK) {
@@ -664,6 +668,8 @@ void WebUiFsDownload(CSocket *socket, const char *query) {
     if (!webhttp::SendAll(socket, s_io_buffer, read_bytes)) {
       break;
     }
+    sent += read_bytes;
+    WebUiTransferProgress(sent, size);
     CScheduler::Get()->Yield();
   }
   sd_close(file);

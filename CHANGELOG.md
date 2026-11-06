@@ -20,7 +20,8 @@
 - Faster uploads and downloads in the web UI: the network and the web UI
   share the emulator's core, and ran only once an Amiga frame (50 times a
   second), between frames. While a file is sent or received, the Amiga
-  now pauses and they have the core to themselves
+  now pauses and they have the core to themselves, with a box over its
+  picture that says so and how far the transfer has got
 - The web UI looks like Workbench 2 and 3, as the menus do: grey windows
   with raised and sunken edges, blue title bars, black text, and a bar
   along the top with Status, Files, the Pi's state, Reboot and Shut Down.

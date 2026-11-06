@@ -1157,15 +1157,21 @@ void bmamiga_idle(void)
    without a pause, with the display shown and the sound fed every 20 ms. */
 static void pause_for_file_transfer(void)
 {
-	if (!host_file_transfer())
+	unsigned long long done, total;
+	int kind = host_file_transfer(&done, &total);
+	if (kind == 0)
 		return;
 	LOG("a file transfer: the Amiga pauses\n");
-	while (host_file_transfer()) {
+	/* A box over the Amiga's picture says why it has stopped, and how far
+	   the transfer has got. */
+	while (kind != 0) {
 		double until = host_time() + 0.02;
-		while (host_file_transfer() && host_time() < until)
-			host_yield();
+		osd_draw_transfer(fb_pixels, fb_pitch_px, pic_w, pic_h, kind == HOST_SENDING,
+		                  total > 0 ? (int) (done * 100 / total) : -1);
 		bmamiga_idle();
 		host_video_present(FALSE);
+		while ((kind = host_file_transfer(&done, &total)) != 0 && host_time() < until)
+			host_yield();
 	}
 	LOG("the file transfer is over: the Amiga goes on\n");
 	frame_start = 0.0;

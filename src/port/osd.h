@@ -95,5 +95,9 @@ int osd_browse_dir(const char *title, char *dir, size_t dir_size, char *path, si
 void osd_notify(const char *text);
 /* Called by the video output each frame: draws the notification, if any. */
 void osd_draw_notification(uint16_t *fb, int pitch_px, int w, int h);
+/* Draws, over the emulator's picture, a box saying that the Amiga is
+   paused while the web UI receives (SENDING FALSE) or sends a file, with
+   how far it has got (PERCENT, or -1 if not known). */
+void osd_draw_transfer(uint16_t *fb, int pitch_px, int w, int h, int sending, int percent);
 
 #endif /* BMAMIGA_OSD_H_ */

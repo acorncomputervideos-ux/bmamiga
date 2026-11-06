@@ -131,10 +131,12 @@ void host_reboot(void);
 void host_power_off(void);
 /* The Pi's IP address as text, when the network is up. Returns 0 if not. */
 int host_network_address(char *address, unsigned size);
-/* TRUE while the web UI is receiving or sending a file: the emulator then
-   pauses, so that the network and the web UI, which share its core, have
-   all of it. */
-int host_file_transfer(void);
+/* While the web UI is receiving or sending a file, HOST_RECEIVING or
+   HOST_SENDING, with the bytes done and in all (0 if not known yet);
+   otherwise 0. The emulator then pauses, so that the network and the web
+   UI, which share its core, have all of it. */
+enum { HOST_RECEIVING = 1, HOST_SENDING = 2 };
+int host_file_transfer(unsigned long long *done, unsigned long long *total);
 /* Network state for people: "Wi-Fi 192.168.1.50", "Off", "Ethernet:
    waiting for address"... */
 void host_network_status(char *text, unsigned size);

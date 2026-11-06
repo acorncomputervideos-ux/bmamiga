@@ -293,7 +293,8 @@ The web UI has:
   be **edited** in the browser; changes take effect after a reboot, and
   the previous version is kept as `.bak`.
   While a file is uploaded or downloaded, the Amiga pauses: the network
-  shares its processor core, and gets all of it then.
+  shares its processor core, and gets all of it then. A box on the screen
+  says so, with how far the transfer has got.
 
 Uploads can't overwrite `cmdline.txt`, `config.txt` or `wpa_supplicant.conf`
 (edit them instead), or anything in `firmware`. Everything else, including

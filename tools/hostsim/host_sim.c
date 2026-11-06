@@ -857,8 +857,9 @@ void host_tcp_close_all(void)
 }
 
 /* The second partition (host.h): BMAMIGA_SD2, a folder, for tests. */
-int host_file_transfer(void)
+int host_file_transfer(unsigned long long *done, unsigned long long *total)
 {
+	*done = *total = 0;
 	return 0;
 }
 

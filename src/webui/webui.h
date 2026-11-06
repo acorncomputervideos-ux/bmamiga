@@ -48,9 +48,13 @@ class CNetSubSystem;
 // base64(<anything>:<pin>).
 void WebUiStart(CNetSubSystem *network, const char *pin);
 
-// True while a file is being uploaded or downloaded: the emulator then
-// pauses and leaves its core to the network and the web UI
-// (host_file_transfer()).
-bool WebUiTransferActive(void);
+// The file transfer under way: WEBUI_RECEIVING (an upload) or
+// WEBUI_SENDING (a download), with the bytes done and in all (0 if not
+// known yet), or 0 if none. The emulator pauses meanwhile and leaves its
+// core to the network and the web UI (host_file_transfer()).
+enum { WEBUI_RECEIVING = 1, WEBUI_SENDING = 2 };
+int WebUiTransfer(unsigned long long *done, unsigned long long *total);
+// How far the transfer has got (webui_fs.cpp).
+void WebUiTransferProgress(unsigned long long done, unsigned long long total);
 
 #endif

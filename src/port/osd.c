@@ -957,3 +957,68 @@ void osd_draw_notification(uint16_t *fb, int pitch_px, int w, int h)
 		             (unsigned char) notify_text[i], C_TEXT, C_BG);
 	draw_char_at(fb, pitch_px, x + (len - 1) * CELL_W, y, ' ', C_TEXT, C_BG);
 }
+
+/* ---- The file transfer box ----------------------------------------------------- */
+
+static void fill_rect(uint16_t *fb, int pitch, int x, int y, int w, int h, uint16_t colour)
+{
+	int i, j;
+	for (j = y; j < y + h; j++)
+		for (i = x; i < x + w; i++)
+			fb[j * pitch + i] = colour;
+}
+
+/* A raised (or sunken) edge around the rectangle. */
+static void bevel(uint16_t *fb, int pitch, int x, int y, int w, int h, int raised)
+{
+	uint16_t light = raised ? C_SHINE : C_SHADOW, dark = raised ? C_SHADOW : C_SHINE;
+	fill_rect(fb, pitch, x, y, w, 1, light);
+	fill_rect(fb, pitch, x, y, 1, h, light);
+	fill_rect(fb, pitch, x, y + h - 1, w, 1, dark);
+	fill_rect(fb, pitch, x + w - 1, y, 1, h, dark);
+}
+
+static void box_text(uint16_t *fb, int pitch, int x, int y, const char *text,
+                     uint16_t fg, uint16_t bg)
+{
+	for (; *text != '\0'; text++, x += CELL_W)
+		draw_char_at(fb, pitch, x, y, (unsigned char) *text, fg, bg);
+}
+
+void osd_draw_transfer(uint16_t *fb, int pitch_px, int w, int h, int sending, int percent)
+{
+	enum { COLS = 38 };
+	const int box_w = COLS * CELL_W + 16, box_h = 4 * CELL_H + 12;
+	const int x = (w - box_w) / 2, y = (h - box_h) / 2;
+	/* The bar, with room for "100%" on its right. */
+	const int bar_x = x + 8, bar_y = y + 3 * CELL_H + 6, bar_h = CELL_H - 4;
+	const int bar_w = box_w - 16 - 5 * CELL_W;
+	char line[COLS + 1];
+
+	if (x < 0 || y < 0)
+		return;
+	fill_rect(fb, pitch_px, x, y, box_w, box_h, C_BG);
+	bevel(fb, pitch_px, x, y, box_w, box_h, TRUE);
+	/* The title bar. */
+	fill_rect(fb, pitch_px, x + 1, y + 1, box_w - 2, CELL_H, C_BLUE);
+	fill_rect(fb, pitch_px, x + 1, y + 1 + CELL_H, box_w - 2, 1, C_SHADOW);
+	box_text(fb, pitch_px, x + 8, y + 1, "BMAmiga", C_SHINE, C_BLUE);
+
+	box_text(fb, pitch_px, x + 8, y + CELL_H + 4,
+	         sending ? "Sending a file to the web UI..." : "Receiving a file from the web UI...",
+	         C_TEXT, C_BG);
+	box_text(fb, pitch_px, x + 8, y + 2 * CELL_H + 4, "The Amiga is paused until it's done.",
+	         C_DIM, C_BG);
+
+	/* How far it has got, in a sunken bar. */
+	fill_rect(fb, pitch_px, bar_x + 1, bar_y + 1, bar_w - 2, bar_h - 2, C_BG);
+	bevel(fb, pitch_px, bar_x, bar_y, bar_w, bar_h, FALSE);
+	if (percent >= 0) {
+		if (percent > 100)
+			percent = 100;
+		fill_rect(fb, pitch_px, bar_x + 1, bar_y + 1, (bar_w - 2) * percent / 100, bar_h - 2,
+		          C_BLUE);
+		snprintf(line, sizeof line, "%4d%%", percent);
+		box_text(fb, pitch_px, bar_x + bar_w, bar_y - 2, line, C_TEXT, C_BG);
+	}
+}
