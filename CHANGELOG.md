@@ -40,6 +40,13 @@
 - The log has the kernel's start-up times too (`start-up … s: the SD card
   and settings read`, `the network started`, `USB started`, `the display
   and sound started`), from power-on as the others
+- Faster file transfers over Wi-Fi: Circle's Wi-Fi driver gives the core
+  away several times a packet, and each time the emulator took it for a
+  whole frame. While the web UI sends or receives a file, the kernel now
+  keeps giving the core to the network wherever the emulator hands it
+  over (its once a frame turn and its sleeps), not only where the Amiga's
+  main loop pauses, which Wi-Fi transfers could miss. The log says when a
+  transfer starts (`webui: Receiving a file`)
 - The web UI looks like Workbench 2 and 3, as the menus do: grey windows
   with raised and sunken edges, blue title bars, black text, and a bar
   along the top with Status, Files, the Pi's state, Reboot and Shut Down.

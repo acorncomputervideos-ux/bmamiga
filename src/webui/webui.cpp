@@ -100,6 +100,8 @@ void StartTransfer(int kind) {
   s_transfer_done = 0;
   s_transfer_total = 0;
   s_transfer = kind;
+  CLogger::Get()->Write("webui", LogNotice, "%s a file",
+                        kind == WEBUI_RECEIVING ? "Receiving" : "Sending");
 }
 
 // Keep in sync with the CIRCLE_NETWORK_* enum in third_party/common/circle.h.

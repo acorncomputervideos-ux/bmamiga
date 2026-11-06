@@ -25,6 +25,7 @@
 #include "kernel.h"
 #include "logging.h"
 #include "network.h"
+#include "webui/webui.h"
 #include "pi45/board.h"
 
 #include <assert.h>
@@ -192,6 +193,25 @@ CKernel::CKernel(void)
 }
 
 CKernel::~CKernel(void) {}
+
+// While the web UI receives or sends a file, Circle's tasks (the network,
+// the Wi-Fi driver, the web UI) have core 1 until it ends, or for at most
+// LIMIT_US: otherwise each time one of them yields, the emulator takes the
+// core for a whole frame, which made transfers, over Wi-Fi above all (its
+// driver yields several times a packet), crawl. src/port/platform.c pauses
+// the Amiga for transfers too; this catches every other way the emulator
+// gives the core away.
+static void YieldForTransfer(unsigned limit_us) {
+  unsigned long long done, total;
+  if (!WebUiTransfer(&done, &total)) {
+    return;
+  }
+  u64 until = CTimer::GetClockTicks64() + limit_us;
+  while (WebUiTransfer(&done, &total) && CTimer::GetClockTicks64() < until) {
+    Core1Beat("running Circle tasks (a file transfer)");
+    CScheduler::Get()->Yield();
+  }
+}
 
 // The log's start-up times, as src/port/platform.c's: seconds since the
 // Pi was switched on (the system timer starts with it).
@@ -860,6 +880,7 @@ void CKernel::VideoPresent(int wait_vsync) {
   Core1Beat("running Circle tasks");
   u64 t0 = CTimer::GetClockTicks64();
   CScheduler::Get()->Yield();
+  YieldForTransfer(15000);
   Core1Beat("writing the log file");
   u64 t1 = CTimer::GetClockTicks64();
   mLog.Drain();
@@ -955,6 +976,7 @@ void CKernel::VideoPresent(int wait_vsync) {
   // Let Circle's tasks (VCHIQ in particular) run once per frame.
   Core1Beat("running Circle tasks");
   CScheduler::Get()->Yield();
+  YieldForTransfer(15000);
   Core1Beat("writing the log file");
   mLog.Drain();
   Core1Beat("showing a frame (dispmanx)");
@@ -1202,7 +1224,12 @@ void host_sleep_us(unsigned us) {
     }
     unsigned step = left > 0.001 ? 1000 : (unsigned)(left * 1000000.0);
     if (step > 0) {
-      CTimer::SimpleusDelay(step);
+      unsigned long long done, total;
+      if (WebUiTransfer(&done, &total)) {
+        YieldForTransfer(step);   // the network has the time instead
+      } else {
+        CTimer::SimpleusDelay(step);
+      }
     }
   }
 }
