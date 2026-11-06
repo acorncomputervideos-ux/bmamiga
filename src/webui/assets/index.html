@@ -44,68 +44,42 @@
 <body>
 <div id="app">
   <aside class="sidebar">
-    <div class="sidebar-mark sidebar-name">BMAmiga</div>
+    <div class="sidebar-name">BMAmiga</div>
     <nav class="nav">
-      <a class="nav-item" href="#/dashboard" data-view="dashboard"><span class="ni-ico">▦</span>Dashboard</a>
-      <a class="nav-item" href="#/files" data-view="files"><span class="ni-ico">▤</span>Files</a>
+      <a class="nav-item" href="#/dashboard" data-view="dashboard">Status</a>
+      <a class="nav-item" href="#/files" data-view="files">Files</a>
     </nav>
-    <label class="up-drop side-drop" id="fb-drop" hidden>
-      <input type="file" id="fb-drop-file" multiple hidden>
-      <span>Drop files here to upload to <b id="fb-drop-dest">/</b></span>
-    </label>
     <div class="sys-card">
       <div class="sys-head"><span class="dot" id="sys-dot"></span><span id="sys-state">Connecting…</span></div>
       <dl>
-        <dt>Uptime</dt><dd id="sc-uptime">—</dd>
-        <dt>IP Address</dt><dd id="sc-ip">—</dd>
+        <dt>Up</dt><dd id="sc-uptime">—</dd>
+        <dt>IP</dt><dd id="sc-ip">—</dd>
         <dt>Version</dt><dd id="sc-ver">—</dd>
       </dl>
     </div>
     <div class="nav nav-bottom">
-      <button class="nav-item" id="nav-reboot"><span class="ni-ico">⟳</span>Reboot</button>
-      <button class="nav-item" id="nav-shutdown"><span class="ni-ico">⏻</span>Shut Down</button>
+      <button class="nav-item" id="nav-reboot">Reboot</button>
+      <button class="nav-item" id="nav-shutdown">Shut Down</button>
     </div>
-    <div class="stripes"></div>
   </aside>
 
   <main class="main">
     <section class="view" id="view-dashboard">
-      <div class="welcome-row">
-        <div>
-          <h1 class="welcome welcome-text">BMAmiga</h1>
-          <p class="welcome-sub">Bare metal Amiga</p>
-        </div>
-        <div class="motto">
-          <span>Retro computing.<br>Modern control.</span>
-          <span class="stripes-sm"></span>
-        </div>
-      </div>
-
       <div class="grid">
         <div class="card qa-card">
-          <h2><span class="c-ico">⚡</span>Quick Actions</h2>
+          <h2>Actions</h2>
           <div class="tiles">
-            <button class="tile tile-blue" id="qa-files">
-              <span class="tile-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M8.5 7.5h7M8.5 11h7M8.5 14.5h7M8.5 18h4"/></svg></span><span class="tile-t">Browse Files</span><span class="tile-s">SD card</span>
-            </button>
-            <button class="tile tile-purple" id="qa-reset">
-              <span class="tile-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.34-5.66"/><path d="M4 4v5h5"/></svg></span><span class="tile-t">Hard Reset</span><span class="tile-s" id="qa-reset-sub">Reset the machine</span>
-            </button>
-            <button class="tile tile-pink" id="qa-reboot">
-              <span class="tile-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg></span><span class="tile-t">Reboot</span><span class="tile-s">Restart BMAmiga</span>
-            </button>
-            <button class="tile tile-red" id="qa-shutdown">
-              <span class="tile-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v8"/><path d="M6.7 7a7.5 7.5 0 1 0 10.6 0"/></svg></span><span class="tile-t">Shut Down</span><span class="tile-s">Power off BMAmiga</span>
-            </button>
-            <button class="tile tile-amber" id="qa-disable">
-              <span class="tile-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M6 18 18 6"/></svg></span><span class="tile-t">Disable Web UI</span><span class="tile-s">Stop until reboot</span>
-            </button>
+            <button class="tile" id="qa-files"><span class="tile-t">Files</span><span class="tile-s">The SD card</span></button>
+            <button class="tile" id="qa-reset"><span class="tile-t">Hard Reset</span><span class="tile-s" id="qa-reset-sub">Reset the machine</span></button>
+            <button class="tile" id="qa-reboot"><span class="tile-t">Reboot</span><span class="tile-s">Restart BMAmiga</span></button>
+            <button class="tile tile-red" id="qa-shutdown"><span class="tile-t">Shut Down</span><span class="tile-s">Power off BMAmiga</span></button>
+            <button class="tile" id="qa-disable"><span class="tile-t">Disable Web UI</span><span class="tile-s">Until the next reboot</span></button>
           </div>
           <p class="msg" id="action-msg"></p>
         </div>
 
         <div class="card">
-          <h2><span class="c-ico">ⓘ</span>System Information</h2>
+          <h2>System</h2>
           <dl class="kv">
             <dt>Hostname</dt><dd id="i-host">—</dd>
             <dt>IP Address</dt><dd id="i-ip">—</dd>
@@ -118,7 +92,7 @@
         </div>
 
         <div class="card">
-          <h2><span class="c-ico">◴</span>Hardware Status</h2>
+          <h2>Hardware</h2>
           <dl class="kv">
             <dt>Under-voltage</dt><dd id="d-uv">—</dd>
             <dt>Under-voltage since boot</dt><dd id="d-uv-boot">—</dd>
@@ -139,15 +113,18 @@
 
     <section class="view" id="view-files" hidden>
       <div class="card fb-card" id="fb-card">
-        <h2><span class="c-ico">▤</span>Files</h2>
+        <h2>Files</h2>
         <div class="fb-bar">
-          <button class="btn" id="fb-up">↑ Up</button>
+          <button class="btn" id="fb-up">Parent</button>
           <div class="crumbs" id="fb-crumbs"></div>
-          <button class="btn" id="fb-mkdir">New folder…</button>
+          <button class="btn" id="fb-mkdir">New Folder…</button>
           <label class="btn" id="fb-upload-btn">Upload…<input type="file" id="fb-upload" multiple hidden></label>
-          <button class="btn" id="fb-refresh" title="Refresh">⟳</button>
+          <button class="btn" id="fb-refresh" title="Refresh">Refresh</button>
         </div>
-        <p class="fb-note">Uploads write to this folder on the SD card. Don't overwrite a disk image the emulator currently has attached.</p>
+        <label class="up-drop side-drop" id="fb-drop" hidden>
+          <input type="file" id="fb-drop-file" multiple hidden>
+          <span>Drop files here, or click, to upload to <b id="fb-drop-dest">/</b>. Don't replace a disk image the Amiga is using.</span>
+        </label>
         <p class="msg" id="fb-status"></p>
         <div class="fb-scroll">
           <table class="fb-table">
@@ -157,11 +134,6 @@
         </div>
       </div>
     </section>
-
-    <footer class="footer">
-      <span>BMAmiga &nbsp;·&nbsp; Bare Metal Amiga</span>
-      <span class="stripes-sm"></span>
-    </footer>
   </main>
 </div>
 

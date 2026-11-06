@@ -90,6 +90,9 @@ extern "C" void bmamiga_request_coldstart(void);
 
 namespace {
 
+// A file upload or download is under way (WebUiTransferActive()).
+volatile bool s_transfer = false;
+
 // Keep in sync with the CIRCLE_NETWORK_* enum in third_party/common/circle.h.
 const char *NetStatusText(int status) {
   switch (status) {
@@ -471,12 +474,16 @@ boolean HandleConnection(CSocket *socket) {
   }
 
   if (is_get && strcmp(target, "/api/fs/download") == 0) {
+    s_transfer = true;
     WebUiFsDownload(socket, query);
+    s_transfer = false;
     return FALSE;
   }
 
   if (is_post && strcmp(target, "/api/fs/upload") == 0) {
+    s_transfer = true;
     WebUiFsUpload(socket, query, body, body_prefetched, content_length);
+    s_transfer = false;
     return FALSE;
   }
 
@@ -659,8 +666,11 @@ void WebUiStart(CNetSubSystem *network, const char *pin) {
   new CWebUiTask(network);  // registers itself with the scheduler
 }
 
+bool WebUiTransferActive(void) { return s_transfer; }
+
 #else  // no Circle networking on this machine build
 
 void WebUiStart(CNetSubSystem *, const char *) {}
+bool WebUiTransferActive(void) { return false; }
 
 #endif

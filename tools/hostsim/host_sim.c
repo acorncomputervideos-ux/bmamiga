@@ -857,6 +857,11 @@ void host_tcp_close_all(void)
 }
 
 /* The second partition (host.h): BMAMIGA_SD2, a folder, for tests. */
+int host_file_transfer(void)
+{
+	return 0;
+}
+
 const char *host_volume2(void)
 {
 	const char *dir = getenv("BMAMIGA_SD2");

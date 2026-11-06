@@ -392,6 +392,8 @@ private:
 
 }  // namespace
 
+extern "C" int host_file_transfer(void) { return WebUiTransferActive() ? 1 : 0; }
+
 extern "C" int host_run_in_background(void (*fn)(void *arg), void *arg) {
   return new CBackgroundTask(fn, arg) != 0;
 }

@@ -17,6 +17,14 @@
   (a file added, removed or replaced: their names, sizes and times are
   kept in amiberry.ini); otherwise it keeps the list it made last time
   (src/port/circle/romcache.cpp). The log says which
+- Faster uploads and downloads in the web UI: the network and the web UI
+  share the emulator's core, and ran only once an Amiga frame (50 times a
+  second), between frames. While a file is sent or received, the Amiga
+  now pauses and they have the core to themselves
+- The web UI looks like Workbench 2 and 3, as the menus do: grey windows
+  with raised and sunken edges, blue title bars, black text, and a bar
+  along the top with Status, Files, the Pi's state, Reboot and Shut Down.
+  Its Dashboard is now Status
 
 ## 0.2.3 – 2026-10-30
 

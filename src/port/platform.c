@@ -1151,6 +1151,26 @@ void bmamiga_idle(void)
 
 /* ---- Main loop ---------------------------------------------------------------- */
 
+/* While the web UI receives or sends a file, the Amiga pauses: the network
+   and the web UI share its core and otherwise run only once a frame,
+   between the Amiga's frames, which made uploads slow. Here they run
+   without a pause, with the display shown and the sound fed every 20 ms. */
+static void pause_for_file_transfer(void)
+{
+	if (!host_file_transfer())
+		return;
+	LOG("a file transfer: the Amiga pauses\n");
+	while (host_file_transfer()) {
+		double until = host_time() + 0.02;
+		while (host_file_transfer() && host_time() < until)
+			host_yield();
+		bmamiga_idle();
+		host_video_present(FALSE);
+	}
+	LOG("the file transfer is over: the Amiga goes on\n");
+	frame_start = 0.0;
+}
+
 static void show_network_address(void)
 {
 	static int shown;
@@ -1269,6 +1289,7 @@ void bmamiga_main(void)
 		double now, amiga_start;
 
 		process_input();
+		pause_for_file_transfer();
 		if (open_menu) {
 			open_menu = FALSE;
 			release_keys();

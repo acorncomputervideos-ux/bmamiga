@@ -280,7 +280,7 @@ Open that address in a browser.
 
 The web UI has:
 
-- **Dashboard**: the Pi's model, address, uptime, temperature, power and
+- **Status**: the Pi's model, address, uptime, temperature, power and
   throttling warnings and free space on the card. Buttons to **Hard Reset**
   the Amiga, **Reboot** BMAmiga, **Shut Down** (the Pi halts; switch it
   off, then on again to restart; a Pi 400 switches itself off, and its
@@ -292,6 +292,8 @@ The web UI has:
   `cmdline.txt`, `config.txt`, `bmamiga.cfg` and `wpa_supplicant.conf` can
   be **edited** in the browser; changes take effect after a reboot, and
   the previous version is kept as `.bak`.
+  While a file is uploaded or downloaded, the Amiga pauses: the network
+  shares its processor core, and gets all of it then.
 
 Uploads can't overwrite `cmdline.txt`, `config.txt` or `wpa_supplicant.conf`
 (edit them instead), or anything in `firmware`. Everything else, including
