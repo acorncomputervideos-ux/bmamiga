@@ -55,7 +55,7 @@ CIRCLE_AMIBERRY_EXCLUDE := src/zz9000_sdk_media_av.o src/archivers/chd/osdsync.o
 	src/osdep/sigsegv_handler.o \
 	src/archivers/chd/posixsocket.o src/archivers/chd/posixptty.o
 CIRCLE_AMIBERRY_EXTRA := circle/osdsync circle/zz9000_media \
-	circle/nosignals circle/chd_nofiles
+	circle/nosignals circle/chd_nofiles circle/romcache
 
 CIRCLE_AMIBERRY_LIB := $(CIRCLE_BUILD)/libamiberry.a
 CIRCLE_PORT_LIB := $(CIRCLE_BUILD)/libbmacircle.a

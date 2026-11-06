@@ -55,6 +55,10 @@ before Amiberry starts, gives it one block.
   of `bsdsocket_host.cpp`; Amiberry then doesn't offer the library.
 - Crash handlers (`nosignals.cpp` for `sigsegv_handler.cpp`): no signals.
 - MAME's special file names, sockets and terminals (`chd_nofiles.cpp`).
+- Amiberry's ROM scan only when the ROMs have changed (`romcache.cpp`,
+  wrapping `scan_roms()` with `--wrap=_Z9scan_romsi`): it reads every ROM
+  file in full on each start, seconds on the SD card. The folders' names,
+  sizes and times are kept in `amiberry.ini` with Amiberry's list.
 
 ## Headers (`include/`)
 

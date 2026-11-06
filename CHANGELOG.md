@@ -11,6 +11,12 @@
 - The log has the start-up's times (`start-up 3.21 s: ...`, from power-on):
   the kernel ready, the display measured, Amiberry initialised and
   started, and the Amiga's first frame, to see where the start's time goes
+- A faster start: Amiberry read every file in the ROM folders in full on
+  every start, to know which ROM each is (seconds on the SD card with a
+  set such as Amiga Forever's). It does now only when they have changed
+  (a file added, removed or replaced: their names, sizes and times are
+  kept in amiberry.ini); otherwise it keeps the list it made last time
+  (src/port/circle/romcache.cpp). The log says which
 
 ## 0.2.3 – 2026-10-30
 

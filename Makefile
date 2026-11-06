@@ -73,6 +73,9 @@ INCLUDE := $(CIRCLE_STDLIB_INCLUDES) $(INCLUDE) -I $(CIRCLEHOME)/addon/fatfs
 # See src/port/fswrap.c, and posix_memalign(), gettimeofday() and realpath()
 # in src/port/circle/posix.c
 LDFLAGS += --wrap=stat --wrap=free --wrap=gettimeofday --wrap=realpath
+# Amiberry's ROM scan, only when the ROMs have changed: scan_roms(int), see
+# src/port/circle/romcache.cpp.
+LDFLAGS += --wrap=_Z9scan_romsi
 
 VERSION_DEFINES = -DBMAMIGA_VERSION=\"$(BMAMIGA_VERSION)\" \
                   -DBMAMIGA_GIT=\"$(BMAMIGA_GIT)\" -DAMIBERRY_VERSION=\"$(AMIBERRY_VERSION)\"
