@@ -1203,6 +1203,13 @@ static void report_speed(double now)
 	speed_amiga = 0.0;
 }
 
+/* The log's start-up times: seconds since the Pi was switched on (the
+   system timer starts with it, so the firmware's time counts too). */
+static void startup_mark(const char *what)
+{
+	LOG("start-up %.2f s: %s\n", host_time(), what);
+}
+
 void bmamiga_main(void)
 {
 	struct retro_system_av_info av;
@@ -1214,10 +1221,12 @@ void bmamiga_main(void)
 		for (;;)
 			host_sleep_us(1000000);
 	}
+	startup_mark("the kernel is ready, the display open");
 	fb_pitch_px = pitch / 2;
 	clear_framebuffer();
 	apply_view();
 	measure_refresh_rate();
+	startup_mark("the display's refresh rate measured");
 
 	sd_path(system_dir, sizeof system_dir, "roms");
 	sd_path(save_dir, sizeof save_dir, "saves");
@@ -1240,8 +1249,10 @@ void bmamiga_main(void)
 	retro_set_input_poll(core_input_poll);
 	retro_set_input_state(core_input_state);
 	retro_init();
+	startup_mark("Amiberry initialised");
 	if (!retro_load_game(NULL))
 		fatal("Amiberry did not start. The log (see the User Guide) says why.");
+	startup_mark("Amiberry started (the Kickstarts read)");
 	retro_set_controller_port_device(0, RETRO_DEVICE_MOUSE);
 	retro_set_controller_port_device(1, RETRO_DEVICE_JOYPAD);
 	retro_get_system_av_info(&av);
@@ -1283,6 +1294,7 @@ void bmamiga_main(void)
 			feed_silence();
 		if (!core_running) {
 			core_running = TRUE;
+			startup_mark("the Amiga's first frame");
 			bmamiga_osd_view(FALSE);
 			insert_saved_media();
 		}

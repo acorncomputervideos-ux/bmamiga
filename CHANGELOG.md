@@ -8,6 +8,9 @@
   blue title bar and selection and raised edges, on a dark blue-grey screen.
   The text has the Amiga's hi-res proportions (single width, double height),
   so the menus are 60 columns wide instead of 40
+- The log has the start-up's times (`start-up 3.21 s: ...`, from power-on):
+  the kernel ready, the display measured, Amiberry initialised and
+  started, and the Amiga's first frame, to see where the start's time goes
 
 ## 0.2.3 – 2026-10-30
 
