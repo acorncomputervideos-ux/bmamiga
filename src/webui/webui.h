@@ -54,6 +54,11 @@ void WebUiStart(CNetSubSystem *network, const char *pin);
 // core to the network and the web UI (host_file_transfer()).
 enum { WEBUI_RECEIVING = 1, WEBUI_SENDING = 2 };
 int WebUiTransfer(unsigned long long *done, unsigned long long *total);
+// True while the web UI is handling a request (any: a page, the status,
+// a folder's list, a transfer). The kernel then gives Circle's tasks a
+// little more of core 1 each frame, so that requests over Wi-Fi don't
+// crawl (src/kernel.cpp).
+bool WebUiBusy(void);
 // How far the transfer has got (webui_fs.cpp).
 void WebUiTransferProgress(unsigned long long done, unsigned long long total);
 

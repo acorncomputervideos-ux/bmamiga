@@ -47,6 +47,10 @@
   over (its once a frame turn and its sleeps), not only where the Amiga's
   main loop pauses, which Wi-Fi transfers could miss. The log says when a
   transfer starts (`webui: Receiving a file`)
+- The web UI stays responsive over Wi-Fi: every request (the page polls
+  the status every few seconds, and lists the folder after an upload) had
+  the same trouble, and they piled up. While it handles one, the network
+  now gets up to 4 ms more of each frame, which an Amiga 500 can spare
 - The web UI looks like Workbench 2 and 3, as the menus do: grey windows
   with raised and sunken edges, blue title bars, black text, and a bar
   along the top with Status, Files, the Pi's state, Reboot and Shut Down.

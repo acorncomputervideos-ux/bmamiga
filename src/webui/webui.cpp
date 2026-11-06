@@ -93,6 +93,8 @@ namespace {
 // A file upload or download under way, and how far it has got
 // (WebUiTransfer()).
 volatile int s_transfer = 0;
+// A request is being handled (WebUiBusy()).
+volatile bool s_busy = false;
 volatile unsigned long long s_transfer_done = 0;
 volatile unsigned long long s_transfer_total = 0;
 
@@ -645,8 +647,10 @@ public:
         CScheduler::Get()->MsSleep(50);
         continue;
       }
+      s_busy = true;
       HandleConnection(connection);
       delete connection;
+      s_busy = false;
       if (g_webui_stop) {
         break;
       }
@@ -677,6 +681,8 @@ void WebUiStart(CNetSubSystem *network, const char *pin) {
   new CWebUiTask(network);  // registers itself with the scheduler
 }
 
+bool WebUiBusy(void) { return s_busy; }
+
 int WebUiTransfer(unsigned long long *done, unsigned long long *total) {
   *done = s_transfer_done;
   *total = s_transfer_total;
@@ -696,5 +702,6 @@ int WebUiTransfer(unsigned long long *done, unsigned long long *total) {
   return 0;
 }
 void WebUiTransferProgress(unsigned long long, unsigned long long) {}
+bool WebUiBusy(void) { return false; }
 
 #endif

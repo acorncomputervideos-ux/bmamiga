@@ -194,21 +194,34 @@ CKernel::CKernel(void)
 
 CKernel::~CKernel(void) {}
 
-// While the web UI receives or sends a file, Circle's tasks (the network,
-// the Wi-Fi driver, the web UI) have core 1 until it ends, or for at most
-// LIMIT_US: otherwise each time one of them yields, the emulator takes the
-// core for a whole frame, which made transfers, over Wi-Fi above all (its
-// driver yields several times a packet), crawl. src/port/platform.c pauses
-// the Amiga for transfers too; this catches every other way the emulator
-// gives the core away.
-static void YieldForTransfer(unsigned limit_us) {
+// While the web UI handles a request, Circle's tasks (the network, the
+// Wi-Fi driver, the web UI) keep core 1 until it is done, or for at most
+// LIMIT_US (a file transfer) or WEB_REQUEST_US (anything else): otherwise
+// each time one of them yields, the emulator takes the core for a whole
+// frame, which made the web UI crawl, over Wi-Fi above all (its driver
+// yields several times a packet). src/port/platform.c pauses the Amiga
+// for transfers too; this catches every other way the emulator gives the
+// core away. An ordinary request (the page polls the status every few
+// seconds) gets only a little of each frame, which the Amiga can spare.
+static const unsigned WEB_REQUEST_US = 4000;
+
+static bool WebUiWorking(bool *transfer) {
   unsigned long long done, total;
-  if (!WebUiTransfer(&done, &total)) {
+  *transfer = WebUiTransfer(&done, &total) != 0;
+  return *transfer || WebUiBusy();
+}
+
+static void YieldForTransfer(unsigned limit_us) {
+  bool transfer;
+  if (!WebUiWorking(&transfer)) {
     return;
   }
+  if (!transfer && limit_us > WEB_REQUEST_US) {
+    limit_us = WEB_REQUEST_US;
+  }
   u64 until = CTimer::GetClockTicks64() + limit_us;
-  while (WebUiTransfer(&done, &total) && CTimer::GetClockTicks64() < until) {
-    Core1Beat("running Circle tasks (a file transfer)");
+  while (WebUiWorking(&transfer) && CTimer::GetClockTicks64() < until) {
+    Core1Beat("running Circle tasks (the web UI)");
     CScheduler::Get()->Yield();
   }
 }
@@ -1224,8 +1237,8 @@ void host_sleep_us(unsigned us) {
     }
     unsigned step = left > 0.001 ? 1000 : (unsigned)(left * 1000000.0);
     if (step > 0) {
-      unsigned long long done, total;
-      if (WebUiTransfer(&done, &total)) {
+      bool transfer;
+      if (WebUiWorking(&transfer)) {
         YieldForTransfer(step);   // the network has the time instead
       } else {
         CTimer::SimpleusDelay(step);
