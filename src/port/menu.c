@@ -85,13 +85,14 @@ static const char *vsync_mode(void)
    rate, src/kms/pi4/modeset.h). The menu changes those lines: hdmi_group
    and hdmi_mode for HDMI0, hdmi_group:1 and hdmi_mode:1 for HDMI1. 720p
    and 1080p (CEA, group 1) are the modes the display driver re-times to
-   the Amiga's rate (docs/PI4.md); 1280x1024 (DMT, group 2, a computer
+   the Amiga's rate (docs/PI4.md), at 50 Hz (modes 19 and 31), a PAL
+   Amiga's, so the TV doesn't switch rate as the Amiga starts; 1280x1024 (DMT, group 2, a computer
    monitor's) stays at 60 Hz, and the Amiga keeps its own time on it. The
    file is kept as config.txt.bak first, as the web UI does. */
 #define CONFIG_TXT "config.txt"
 #define CONFIG_TXT_MAX 16384
 
-static const struct { int group, mode; } pi4_modes[] = {{1, 4}, {1, 16}, {2, 35}};
+static const struct { int group, mode; } pi4_modes[] = {{1, 19}, {1, 31}, {2, 35}};
 static const char *const pi4_mode_names[] = {"1280x720", "1920x1080", "1280x1024", NULL};
 
 static void card_path(char *path, size_t size, const char *name)
@@ -209,15 +210,15 @@ static int pi4_set_config_mode(int group, int mode)
 }
 
 /* The Resolution item on the Pi 4 and Pi 400. */
-/* Which of pi4_modes config.txt has, or -1. 720p and 1080p at 50 Hz
-   (modes 19 and 31) count as theirs. */
+/* Which of pi4_modes config.txt has, or -1. 720p and 1080p at 60 Hz
+   (modes 4 and 16) count as theirs. */
 static int pi4_current_mode(void)
 {
 	int group, mode = pi4_config_mode(&group), i;
-	if (group == 1 && mode == 19)
-		mode = 4;
-	if (group == 1 && mode == 31)
-		mode = 16;
+	if (group == 1 && mode == 4)
+		mode = 19;
+	if (group == 1 && mode == 16)
+		mode = 31;
 	for (i = 0; pi4_mode_names[i] != NULL; i++)
 		if (pi4_modes[i].group == group && pi4_modes[i].mode == mode)
 			return i;
@@ -226,9 +227,13 @@ static int pi4_current_mode(void)
 
 static void pi4_resolution_menu(void)
 {
-	int current = pi4_current_mode(), i;
+	int current = pi4_current_mode(), group, mode, i;
 	i = osd_choose("Resolution (reboot)", pi4_mode_names, current);
-	if (i < 0 || i == current)
+	if (i < 0)
+		return;
+	/* The same size is written again if it is the 60 Hz one. */
+	mode = pi4_config_mode(&group);
+	if (i == current && group == pi4_modes[i].group && mode == pi4_modes[i].mode)
 		return;
 	if (pi4_set_config_mode(pi4_modes[i].group, pi4_modes[i].mode))
 		reboot_needed = TRUE;

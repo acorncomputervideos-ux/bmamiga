@@ -32,6 +32,14 @@
   5's only): 1280x720, 1920x1080 or 1280x1024 (a computer monitor's, at
   60 Hz), by changing hdmi_group and hdmi_mode in config.txt (kept as
   config.txt.bak), after a reboot
+- A quicker start on a TV: config.txt starts the display at 1280x720 50 Hz
+  (hdmi_mode=19), a PAL Amiga's rate, where it was 60 Hz, which BMAmiga
+  then switched to 50 Hz as the Amiga started, and most TVs go black for
+  a second or more while they change. The Resolution menu chooses the
+  50 Hz modes too (and writes them over a 60 Hz one)
+- The log has the kernel's start-up times too (`start-up … s: the SD card
+  and settings read`, `the network started`, `USB started`, `the display
+  and sound started`), from power-on as the others
 - The web UI looks like Workbench 2 and 3, as the menus do: grey windows
   with raised and sunken edges, blue title bars, black text, and a bar
   along the top with Status, Files, the Pi's state, Reboot and Shut Down.

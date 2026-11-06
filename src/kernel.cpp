@@ -193,6 +193,13 @@ CKernel::CKernel(void)
 
 CKernel::~CKernel(void) {}
 
+// The log's start-up times, as src/port/platform.c's: seconds since the
+// Pi was switched on (the system timer starts with it).
+static void StartupMark(const char *what) {
+  CLogger::Get()->Write(FromKernel, LogNotice, "start-up %.2f s: %s",
+                        (double)CTimer::GetClockTicks64() / CLOCKHZ, what);
+}
+
 bool CKernel::Initialize(void) {
   if (!mSerial.Initialize(115200)) {
     return false;
@@ -250,16 +257,19 @@ bool CKernel::Initialize(void) {
     return false;
   }
   CGlueStdioInit(mConsole);
+  StartupMark("the SD card and settings read");
   mLog.Flush();
 
   // Before USB, as BMC64 does: the Pi 3's Ethernet is a USB device and
   // joins the network stack once USB finds it.
   NetworkInitialize(&mOptions);
+  StartupMark("the network started");
   mLog.Flush();
 
   if (!mUSBHCI.Initialize()) {
     return false;
   }
+  StartupMark("USB started");
   mLog.Flush();
 
   const char *audio_out = mOptions.Get("audio_out", "auto");
@@ -294,6 +304,7 @@ bool CKernel::Initialize(void) {
   mLog.Flush();
   // Without sound the emulator still runs.
   mPi4Sound.Initialize(&mInterrupt, volume, sound_output);
+  StartupMark("the display and sound started");
   mLog.Flush();
 #else
   if (strcmp(audio_out, "hdmi") == 0) {
